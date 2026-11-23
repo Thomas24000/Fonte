@@ -111,6 +111,23 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .chip .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-left:7px;vertical-align:middle}
 .today{display:inline-block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:2px}
 .btn.isdone{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:600}
+.restbtn{display:flex;align-items:center;gap:8px;width:100%;border:1px dashed var(--line);background:transparent;border-radius:10px;padding:9px 12px;font-size:14px;color:var(--muted);text-align:left;font-variant-numeric:tabular-nums}
+.restbtn svg{width:16px;height:16px;flex:none}
+.restbtn.run{border-style:solid;border-color:var(--accent);color:var(--accent)}
+.restbtn.run b{font-weight:700}
+.restbtn.over{border-style:solid;border-color:var(--ok);background:var(--ok);color:#fff;font-weight:600}
+.timerbar{position:sticky;bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:5;background:var(--fg);color:var(--bg);border-radius:14px;padding:12px 14px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;overflow:hidden;box-shadow:0 6px 24px #0004}
+.timerbar .tm-txt{display:flex;flex-direction:column;min-width:0}
+.timerbar .tm-name{font-size:12px;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.timerbar .tm-big{font-family:var(--display);font-weight:800;font-size:40px;line-height:1;font-variant-numeric:tabular-nums}
+.timerbar .btn{background:transparent;color:var(--bg);border-color:color-mix(in srgb,var(--bg) 35%,transparent)}
+.timerbar .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.timerbar .tm-prog{position:absolute;left:0;right:0;bottom:0;height:4px;background:color-mix(in srgb,var(--bg) 20%,transparent)}
+.timerbar .tm-fill{display:block;height:100%;background:var(--accent);transition:width .25s linear}
+.timerbar.over{background:var(--ok);color:#fff}
+.timerbar.over .tm-big{animation:pulse 1s ease-in-out 3}
+@keyframes pulse{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.timerbar .tm-fill{transition:none}.timerbar.over .tm-big{animation:none}}
 .hint{margin:0;font-size:13px;color:var(--muted)}
 .hint b{color:var(--danger)}
 textarea.code{font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;width:100%;resize:vertical;word-break:break-all}
@@ -351,11 +368,67 @@ function render(){
         <div class="wline"><button class="step" data-act="minus" data-id="${e.id}" aria-label="Retirer ${fmt(e.step)} kg">−</button>
           <button class="weight" data-act="edit-ex" data-id="${e.id}" data-focus="weight">${e.type==="corps"&&!e.weight?"PDC":fmt(e.weight)}<small>${e.type==="corps"&&!e.weight?"":unit}</small></button>
           <button class="step" data-act="plus" data-id="${e.id}" aria-label="Ajouter ${fmt(e.step)} kg">+</button>${trend}</div>
-        ${pl}${e.note?`<div class="note">${esc(e.note)}</div>`:""}
+        ${pl}${e.rest?restBtn(e):""}${e.note?`<div class="note">${esc(e.note)}</div>`:""}
       </article>`}).join("")+`</div>`;
   }
+  h+=timerBar();
   app.innerHTML=h;
 }
+
+/* ---------- minuteur de repos ---------- */
+// timer = {exId, name, end (ms), total (ms), fired} ; gardé sur l'appareil pour survivre à une mise en veille
+const TKEY="fonte-minuteur";
+let timer=null, tickId=null, actx=null, wl=null;
+try{const t=JSON.parse(lsGet(TKEY)||"null"); if(t&&t.end&&Date.now()-t.end<90000) timer=t;}catch(e){}
+const CLOCK='<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 6v3.2l2 1.3M6.5 1.8h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+function mmss(ms){const s=Math.max(0,Math.ceil(ms/1000));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
+function restBtn(e){
+  const run=timer&&timer.exId===e.id;
+  if(run&&timer.fired) return `<button class="restbtn over" data-act="rest-stop">${CLOCK}<span>Repos terminé · c'est reparti</span></button>`;
+  if(run) return `<button class="restbtn run" data-act="rest-stop">${CLOCK}<span>Repos <b class="tm-left">${mmss(timer.end-Date.now())}</b> · toucher pour arrêter</span></button>`;
+  return `<button class="restbtn" data-act="rest" data-id="${e.id}">${CLOCK}<span>Lancer le repos · ${mmss(e.rest*1000)}</span></button>`;
+}
+function timerBar(){
+  if(!timer) return "";
+  const left=timer.end-Date.now(), pct=timer.fired?100:Math.min(100,Math.max(0,100-left/timer.total*100));
+  return `<div class="timerbar ${timer.fired?"over":""}" role="timer" aria-live="polite">
+    <div class="tm-txt"><span class="tm-name">${timer.fired?"Repos terminé":"Repos"} · ${esc(timer.name)}</span><span class="tm-big tm-left">${timer.fired?"0:00":mmss(left)}</span></div>
+    <div class="row">${timer.fired?"":`<button class="btn" data-act="rest-add">+15 s</button>`}<button class="btn ${timer.fired?"primary":""}" data-act="rest-stop">${timer.fired?"OK":"Arrêter"}</button></div>
+    <div class="tm-prog"><i class="tm-fill" style="width:${pct}%"></i></div></div>`;
+}
+function storeTimer(){lsSet(TKEY,timer?JSON.stringify(timer):"null")}
+function startRest(e){
+  timer={exId:e.id,name:e.name,end:Date.now()+e.rest*1000,total:e.rest*1000,fired:false};
+  storeTimer(); unlockAudio(); keepAwake(true); runTick(); render();
+}
+function stopRest(){timer=null;storeTimer();keepAwake(false);if(tickId){clearInterval(tickId);tickId=null}render()}
+function runTick(){if(!tickId) tickId=setInterval(tick,250)}
+function tick(){
+  if(!timer){clearInterval(tickId);tickId=null;return}
+  const left=timer.end-Date.now();
+  if(!timer.fired&&left<=0){timer.fired=true;storeTimer();alarm();keepAwake(false);if(!editing)render();return}
+  if(timer.fired){if(-left>90000)stopRest();return}
+  document.querySelectorAll(".tm-left").forEach(el=>el.textContent=mmss(left));
+  const f=document.querySelector(".tm-fill"); if(f) f.style.width=Math.min(100,100-left/timer.total*100)+"%";
+}
+function unlockAudio(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state==="suspended")actx.resume()}catch(e){}}
+function alarm(){
+  try{navigator.vibrate&&navigator.vibrate([300,150,300,150,600])}catch(e){}
+  try{
+    if(!actx)return; const t0=actx.currentTime;
+    [0,0.35,0.7].forEach((d,i)=>{const o=actx.createOscillator(),g=actx.createGain();o.type="sine";o.frequency.value=i===2?1320:880;
+      g.gain.setValueAtTime(0.0001,t0+d);g.gain.exponentialRampToValueAtTime(0.4,t0+d+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t0+d+0.25);
+      o.connect(g).connect(actx.destination);o.start(t0+d);o.stop(t0+d+0.3)});
+  }catch(e){}
+}
+async function keepAwake(on){
+  try{
+    if(on&&!wl&&navigator.wakeLock){wl=await navigator.wakeLock.request("screen");wl.addEventListener("release",()=>{wl=null})}
+    else if(!on&&wl){const w=wl;wl=null;await w.release()}
+  }catch(e){wl=null}
+}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&timer){if(!timer.fired)keepAwake(true);tick();if(!editing)render()}});
+if(timer) runTick();
 
 /* ---------- formulaires ---------- */
 function openEditor(kind,target,focus){editing={kind,target,focus};armed=null;render();try{window.scrollTo(0,0)}catch(e){}}
@@ -475,6 +548,9 @@ function handleClick(ev){
     case "close": closeSheet(); break;
     case "save": sheetSave(); break;
     case "plus": case "minus": {const e=findEx(id); if(setWeight(e,e.weight+(act==="plus"?1:-1)*(e.step||2.5))) markDone(sessOfEx(id)); persist(); render(); break;}
+    case "rest": {const e=findEx(id); if(e&&e.rest) startRest(e); break;}
+    case "rest-stop": stopRest(); break;
+    case "rest-add": if(timer&&!timer.fired){timer.end+=15000;timer.total+=15000;storeTimer();tick()} break;
     case "toggle-done": {const s=sess(), g=G(); markDone(s,g.done?.[s.id]!==today()); persist(); render(); break;}
     case "wipe":
       if(armed!=="wipe"){armed="wipe";render();break}
