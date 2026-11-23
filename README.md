@@ -7,6 +7,7 @@ Mémo de muscu : tes salles, tes séances, tes exercices et tes poids.
 - Pour les exos à la barre (20 kg), les disques à mettre de chaque côté sont affichés.
 
 Les données sont enregistrées **dans le navigateur du téléphone** (rien n'est envoyé ailleurs).
+L'app marche **hors ligne** : après une première ouverture avec du réseau, elle s'ouvre même sans connexion (`sw.js`).
 Pense à faire de temps en temps « Exporter mes données » depuis l'écran des salles pour garder une sauvegarde.
 
 ## Installer sur le téléphone
