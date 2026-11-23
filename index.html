@@ -111,23 +111,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .chip .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-left:7px;vertical-align:middle}
 .today{display:inline-block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:2px}
 .btn.isdone{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:600}
-.restbtn{display:flex;align-items:center;gap:8px;width:100%;border:1px dashed var(--line);background:transparent;border-radius:10px;padding:9px 12px;font-size:14px;color:var(--muted);text-align:left;font-variant-numeric:tabular-nums}
-.restbtn svg{width:16px;height:16px;flex:none}
-.restbtn.run{border-style:solid;border-color:var(--accent);color:var(--accent)}
-.restbtn.run b{font-weight:700}
-.restbtn.over{border-style:solid;border-color:var(--ok);background:var(--ok);color:#fff;font-weight:600}
-.timerbar{position:sticky;bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:5;background:var(--fg);color:var(--bg);border-radius:14px;padding:12px 14px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;overflow:hidden;box-shadow:0 6px 24px #0004}
-.timerbar .tm-txt{display:flex;flex-direction:column;min-width:0}
-.timerbar .tm-name{font-size:12px;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.timerbar .tm-big{font-family:var(--display);font-weight:800;font-size:40px;line-height:1;font-variant-numeric:tabular-nums}
-.timerbar .btn{background:transparent;color:var(--bg);border-color:color-mix(in srgb,var(--bg) 35%,transparent)}
-.timerbar .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
-.timerbar .tm-prog{position:absolute;left:0;right:0;bottom:0;height:4px;background:color-mix(in srgb,var(--bg) 20%,transparent)}
-.timerbar .tm-fill{display:block;height:100%;background:var(--accent);transition:width .25s linear}
-.timerbar.over{background:var(--ok);color:#fff}
-.timerbar.over .tm-big{animation:pulse 1s ease-in-out 3}
-@keyframes pulse{50%{opacity:.35}}
-@media (prefers-reduced-motion:reduce){.timerbar .tm-fill{transition:none}.timerbar.over .tm-big{animation:none}}
+.chrono{position:sticky;bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px 10px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;box-shadow:0 6px 24px #0003}
+.chrono .ch-txt{display:flex;flex-direction:column;min-width:0}
+.chrono .ch-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.chrono .ch-big{font-family:var(--display);font-weight:800;font-size:34px;line-height:1;font-variant-numeric:tabular-nums}
+.chrono .ch-main{min-width:110px;padding-block:12px;font-size:16px}
+.chrono.run{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chrono.run .ch-label{color:inherit;opacity:.7}
+.chrono.run .btn:not(.primary){background:transparent;color:var(--bg);border-color:color-mix(in srgb,var(--bg) 35%,transparent)}
+.chrono.run .ch-main{background:var(--danger);border-color:var(--danger);color:#fff}
 .hint{margin:0;font-size:13px;color:var(--muted)}
 .hint b{color:var(--danger)}
 textarea.code{font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;width:100%;resize:vertical;word-break:break-all}
@@ -363,63 +355,48 @@ function render(){
       const unit=e.type==="corps"?(e.weight>0?"kg lest":"PDC"):e.type==="halteres"?"kg/main":"kg";
       return `<article class="card">
         <div class="chead">
-          <div style="flex:1;min-width:0"><span class="tag t-${esc(e.type)}">${esc(TAGS[e.type]||"")}</span><h3>${esc(e.name)}</h3><div class="scheme"><b>${e.sets} × ${esc(e.reps)}</b>${e.rest?` · repos ${fmt(e.rest/60)} min`:""}${lastUp?` · poids du ${dateFr(lastUp.d)}`:""}</div></div>
+          <div style="flex:1;min-width:0"><span class="tag t-${esc(e.type)}">${esc(TAGS[e.type]||"")}</span><h3>${esc(e.name)}</h3><div class="scheme"><b>${e.sets} × ${esc(e.reps)}</b>${lastUp?` · poids du ${dateFr(lastUp.d)}`:""}</div></div>
           <button class="btn ghost" data-act="edit-ex" data-id="${e.id}" aria-label="Modifier ${esc(e.name)}">Modifier</button></div>
         <div class="wline"><button class="step" data-act="minus" data-id="${e.id}" aria-label="Retirer ${fmt(e.step)} kg">−</button>
           <button class="weight" data-act="edit-ex" data-id="${e.id}" data-focus="weight">${e.type==="corps"&&!e.weight?"PDC":fmt(e.weight)}<small>${e.type==="corps"&&!e.weight?"":unit}</small></button>
           <button class="step" data-act="plus" data-id="${e.id}" aria-label="Ajouter ${fmt(e.step)} kg">+</button>${trend}</div>
-        ${pl}${e.rest?restBtn(e):""}${e.note?`<div class="note">${esc(e.note)}</div>`:""}
+        ${pl}${e.note?`<div class="note">${esc(e.note)}</div>`:""}
       </article>`}).join("")+`</div>`;
   }
-  h+=timerBar();
+  h+=chronoBar();
   app.innerHTML=h;
 }
 
-/* ---------- minuteur de repos ---------- */
-// timer = {exId, name, end (ms), total (ms), fired} ; gardé sur l'appareil pour survivre à une mise en veille
-const TKEY="fonte-minuteur";
-let timer=null, tickId=null, actx=null, wl=null;
-try{const t=JSON.parse(lsGet(TKEY)||"null"); if(t&&t.end&&Date.now()-t.end<90000) timer=t;}catch(e){}
-const CLOCK='<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 6v3.2l2 1.3M6.5 1.8h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
-function mmss(ms){const s=Math.max(0,Math.ceil(ms/1000));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
-function restBtn(e){
-  const run=timer&&timer.exId===e.id;
-  if(run&&timer.fired) return `<button class="restbtn over" data-act="rest-stop">${CLOCK}<span>Repos terminé · c'est reparti</span></button>`;
-  if(run) return `<button class="restbtn run" data-act="rest-stop">${CLOCK}<span>Repos <b class="tm-left">${mmss(timer.end-Date.now())}</b> · toucher pour arrêter</span></button>`;
-  return `<button class="restbtn" data-act="rest" data-id="${e.id}">${CLOCK}<span>Lancer le repos · ${mmss(e.rest*1000)}</span></button>`;
+/* ---------- chrono ---------- */
+// chrono = {acc: ms déjà comptées, since: timestamp de démarrage ou null si à l'arrêt}
+// gardé sur l'appareil pour survivre à une mise en veille ou à un rechargement
+const CKEY="fonte-chrono";
+let chrono={acc:0,since:null}, tickId=null, wl=null;
+try{const c=JSON.parse(lsGet(CKEY)||"null"); if(c&&typeof c.acc==="number") chrono={acc:c.acc,since:c.since||null};}catch(e){}
+function chronoMs(){return chrono.acc+(chrono.since?Date.now()-chrono.since:0)}
+function chronoTxt(ms){const s=Math.floor(ms/1000),m=Math.floor(s/60),h=Math.floor(m/60);
+  return h?h+":"+String(m%60).padStart(2,"0")+":"+String(s%60).padStart(2,"0"):m+":"+String(s%60).padStart(2,"0")}
+function chronoBar(){
+  const run=!!chrono.since, ms=chronoMs(), zero=!run&&ms===0;
+  return `<div class="chrono ${run?"run":""}" role="timer">
+    <div class="ch-txt"><span class="ch-label">Chrono${run?"":zero?"":" · en pause"}</span><span class="ch-big" id="ch-time">${chronoTxt(ms)}</span></div>
+    <div class="row">${zero?"":`<button class="btn" data-act="ch-reset">${run?"Relancer à 0":"Remettre à 0"}</button>`}
+      <button class="btn primary ch-main" data-act="ch-toggle">${run?"Arrêter":zero?"Démarrer":"Reprendre"}</button></div></div>`;
 }
-function timerBar(){
-  if(!timer) return "";
-  const left=timer.end-Date.now(), pct=timer.fired?100:Math.min(100,Math.max(0,100-left/timer.total*100));
-  return `<div class="timerbar ${timer.fired?"over":""}" role="timer" aria-live="polite">
-    <div class="tm-txt"><span class="tm-name">${timer.fired?"Repos terminé":"Repos"} · ${esc(timer.name)}</span><span class="tm-big tm-left">${timer.fired?"0:00":mmss(left)}</span></div>
-    <div class="row">${timer.fired?"":`<button class="btn" data-act="rest-add">+15 s</button>`}<button class="btn ${timer.fired?"primary":""}" data-act="rest-stop">${timer.fired?"OK":"Arrêter"}</button></div>
-    <div class="tm-prog"><i class="tm-fill" style="width:${pct}%"></i></div></div>`;
+function storeChrono(){lsSet(CKEY,JSON.stringify(chrono))}
+function chronoToggle(){
+  if(chrono.since){chrono.acc+=Date.now()-chrono.since;chrono.since=null;keepAwake(false)}
+  else{chrono.since=Date.now();keepAwake(true)}
+  storeChrono();runTick();render();
 }
-function storeTimer(){lsSet(TKEY,timer?JSON.stringify(timer):"null")}
-function startRest(e){
-  timer={exId:e.id,name:e.name,end:Date.now()+e.rest*1000,total:e.rest*1000,fired:false};
-  storeTimer(); unlockAudio(); keepAwake(true); runTick(); render();
+function chronoReset(){
+  // en marche : repart de 0 tout de suite (série suivante) ; à l'arrêt : revient à 0
+  chrono={acc:0,since:chrono.since?Date.now():null}; storeChrono(); render();
 }
-function stopRest(){timer=null;storeTimer();keepAwake(false);if(tickId){clearInterval(tickId);tickId=null}render()}
-function runTick(){if(!tickId) tickId=setInterval(tick,250)}
+function runTick(){if(chrono.since&&!tickId) tickId=setInterval(tick,250)}
 function tick(){
-  if(!timer){clearInterval(tickId);tickId=null;return}
-  const left=timer.end-Date.now();
-  if(!timer.fired&&left<=0){timer.fired=true;storeTimer();alarm();keepAwake(false);if(!editing)render();return}
-  if(timer.fired){if(-left>90000)stopRest();return}
-  document.querySelectorAll(".tm-left").forEach(el=>el.textContent=mmss(left));
-  const f=document.querySelector(".tm-fill"); if(f) f.style.width=Math.min(100,100-left/timer.total*100)+"%";
-}
-function unlockAudio(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state==="suspended")actx.resume()}catch(e){}}
-function alarm(){
-  try{navigator.vibrate&&navigator.vibrate([300,150,300,150,600])}catch(e){}
-  try{
-    if(!actx)return; const t0=actx.currentTime;
-    [0,0.35,0.7].forEach((d,i)=>{const o=actx.createOscillator(),g=actx.createGain();o.type="sine";o.frequency.value=i===2?1320:880;
-      g.gain.setValueAtTime(0.0001,t0+d);g.gain.exponentialRampToValueAtTime(0.4,t0+d+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t0+d+0.25);
-      o.connect(g).connect(actx.destination);o.start(t0+d);o.stop(t0+d+0.3)});
-  }catch(e){}
+  if(!chrono.since){clearInterval(tickId);tickId=null;return}
+  const el=document.getElementById("ch-time"); if(el) el.textContent=chronoTxt(chronoMs());
 }
 async function keepAwake(on){
   try{
@@ -427,8 +404,8 @@ async function keepAwake(on){
     else if(!on&&wl){const w=wl;wl=null;await w.release()}
   }catch(e){wl=null}
 }
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&timer){if(!timer.fired)keepAwake(true);tick();if(!editing)render()}});
-if(timer) runTick();
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&chrono.since){keepAwake(true);tick()}});
+if(chrono.since) runTick();
 
 /* ---------- formulaires ---------- */
 function openEditor(kind,target,focus){editing={kind,target,focus};armed=null;render();try{window.scrollTo(0,0)}catch(e){}}
@@ -489,9 +466,8 @@ function exSheet(e,focus){
     <h2>${e?"Modifier l'exercice":"Nouvel exercice"}</h2>
     <label class="field">Exercice<input id="ex-name" maxlength="60" value="${esc(v.name)}" placeholder="Ex. Squat"></label>
     <label class="field">Matériel<select id="ex-type">${Object.entries(TYPES).map(([k,l])=>`<option value="${k}" ${k===v.type?"selected":""}>${l}</option>`).join("")}</select></label>
-    <div class="grid3"><label class="field">Séries<input id="ex-sets" type="number" inputmode="numeric" min="1" max="20" value="${v.sets}"></label>
-      <label class="field">Reps<input id="ex-reps" maxlength="12" value="${esc(v.reps)}" placeholder="8 ou 8-12"></label>
-      <label class="field">Repos (min)<input id="ex-rest" inputmode="decimal" value="${fmt((v.rest||0)/60)}" placeholder="1,5"></label></div>
+    <div class="grid2"><label class="field">Séries<input id="ex-sets" type="number" inputmode="numeric" min="1" max="20" value="${v.sets}"></label>
+      <label class="field">Reps<input id="ex-reps" maxlength="12" value="${esc(v.reps)}" placeholder="8 ou 8-12"></label></div>
     <div class="grid2"><label class="field">Poids (kg)<input id="ex-weight" inputmode="decimal" value="${fmt(v.weight)}"></label>
       <label class="field">Pas du + / − (kg)<input id="ex-step" inputmode="decimal" value="${fmt(v.step)}"></label></div>
     <label class="field">Note<textarea id="ex-note" rows="2" maxlength="300" placeholder="Réglage machine, consigne technique…">${esc(v.note)}</textarea></label>
@@ -503,7 +479,7 @@ function exSheet(e,focus){
     if(!e&&!sess()){showErr("aucune séance sélectionnée");return}
     const t=e||{id:uid(),history:[]};
     t.name=name; t.type=$("#ex-type").value; t.sets=Math.max(1,Math.round(num($("#ex-sets").value))||1);
-    t.reps=$("#ex-reps").value.trim()||"10"; t.rest=Math.max(0,Math.round(num($("#ex-rest").value)*60));
+    t.reps=$("#ex-reps").value.trim()||"10";
     t.step=num($("#ex-step").value)||2.5; t.note=$("#ex-note").value.trim();
     const w=num($("#ex-weight").value);
     if(e){ if(setWeight(t,w)) markDone(sessOfEx(t.id)); } else {t.weight=w;t.history=[{d:today(),w}];sess().exercises.push(t)}
@@ -548,9 +524,8 @@ function handleClick(ev){
     case "close": closeSheet(); break;
     case "save": sheetSave(); break;
     case "plus": case "minus": {const e=findEx(id); if(setWeight(e,e.weight+(act==="plus"?1:-1)*(e.step||2.5))) markDone(sessOfEx(id)); persist(); render(); break;}
-    case "rest": {const e=findEx(id); if(e&&e.rest) startRest(e); break;}
-    case "rest-stop": stopRest(); break;
-    case "rest-add": if(timer&&!timer.fired){timer.end+=15000;timer.total+=15000;storeTimer();tick()} break;
+    case "ch-toggle": chronoToggle(); break;
+    case "ch-reset": chronoReset(); break;
     case "toggle-done": {const s=sess(), g=G(); markDone(s,g.done?.[s.id]!==today()); persist(); render(); break;}
     case "wipe":
       if(armed!=="wipe"){armed="wipe";render();break}
