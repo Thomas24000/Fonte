@@ -1,7 +1,7 @@
 // Fonte : fonctionnement hors ligne et ouverture instantanée.
 // L'app est servie depuis la copie du téléphone. Chaque déploiement change ce fichier (version ci-dessous) :
 // le navigateur le remarque en arrière-plan, télécharge la nouvelle version, puis la page propose de recharger.
-const VERSION = "d59d67fb62";
+const VERSION = "51856125c4";
 const CACHE = "fonte-app-" + VERSION;
 const CORE = ["./", "index.html", "manifest.webmanifest", "apple-touch-icon.png", "icon-192.png", "icon-512.png"];
 const FONT_HOSTS = ["fonts.googleapis.com", "fonts.gstatic.com"];
