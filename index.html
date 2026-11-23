@@ -108,6 +108,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .t-machine{color:var(--accent)}
 .t-poulie{color:var(--t-poulie)}
 .t-corps{color:var(--muted)}
+.chip .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-left:7px;vertical-align:middle}
+.today{display:inline-block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:2px}
+.btn.isdone{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:600}
 .hint{margin:0;font-size:13px;color:var(--muted)}
 .hint b{color:var(--danger)}
 textarea.code{font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;width:100%;resize:vertical;word-break:break-all}
@@ -234,13 +237,32 @@ async function init(){
 const G=()=>state.gyms.find(g=>g.id===gymId);
 const sess=()=>G()?.sessions.find(s=>s.id===current);
 function findEx(id){for(const s of (G()?.sessions||[])){const e=s.exercises.find(x=>x.id===id);if(e)return e}return null}
-function enterGym(id){gymId=id;lsSet(LASTGYM,id);current=G()?.sessions[0]?.id||null;armed=null;render();try{window.scrollTo(0,0)}catch(e){}}
+function enterGym(id){gymId=id;lsSet(LASTGYM,id);current=nextSession(G())?.id||null;armed=null;render();try{window.scrollTo(0,0)}catch(e){}}
+/* ---------- rotation des séances ---------- */
+// g.done = {idSéance: "AAAA-MM-JJ"} : dernier jour où la séance a été faite dans cette salle
+function daysAgo(d){return Math.round((new Date(today()+"T12:00")-new Date(d+"T12:00"))/864e5)}
+function sinceTxt(d){if(!d)return "jamais faite ici";const n=daysAgo(d);return n<=0?"faite aujourd'hui":n===1?"faite hier":"faite il y a "+n+" jours"}
+function lastDone(g){
+  // la séance faite le plus récemment (à date égale, la plus loin dans l'ordre)
+  let best=null,bi=-1;
+  (g.sessions||[]).forEach((s,i)=>{const d=g.done?.[s.id];if(d&&(!best||d>best.d||(d===best.d&&i>bi))){best={s,d};bi=i}});
+  return best;
+}
+function nextSession(g){
+  if(!g||!g.sessions.length)return null;
+  const l=lastDone(g); if(!l)return g.sessions[0];
+  if(l.d===today())return l.s;                       // déjà commencée aujourd'hui : on y reste
+  const i=g.sessions.indexOf(l.s); return g.sessions[(i+1)%g.sessions.length];
+}
+function markDone(s,on=true){const g=G();if(!g||!s)return;g.done=g.done||{};if(on)g.done[s.id]=today();else delete g.done[s.id]}
+function sessOfEx(id){return G()?.sessions.find(s=>s.exercises.some(x=>x.id===id))}
 function setWeight(e,w){
-  w=Math.max(0,Math.round(w*100)/100); if(w===e.weight)return;
+  w=Math.max(0,Math.round(w*100)/100); if(w===e.weight)return false;
   e.weight=w; e.history=e.history||[];
   const last=e.history[e.history.length-1];
   if(last&&last.d===today()) last.w=w; else e.history.push({d:today(),w});
   if(e.history.length>60) e.history=e.history.slice(-60);
+  return true;
 }
 const PLATES=[[25,"--p25"],[20,"--p20"],[15,"--p15"],[10,"--p10"],[5,"--p5"],[2.5,"--p25s"],[1.25,"--p125"]];
 function plates(total){
@@ -285,7 +307,7 @@ function render(){
       const last=lsGet(LASTGYM);
       h+=`<h2>À quelle salle es-tu ?</h2><div class="gyms">`+state.gyms.map(g=>{
         const nx=g.sessions.reduce((a,s)=>a+s.exercises.length,0);
-        return `<button class="gym" data-act="enter-gym" data-id="${g.id}"><span class="gname">${esc(g.name)}</span><span class="gmeta">${plural(g.sessions.length,"séance")} · ${plural(nx,"exercice")}${g.id===last?` · <b>dernière visite</b>`:""}</span></button>`}).join("")+
+        return `<button class="gym" data-act="enter-gym" data-id="${g.id}"><span class="gname">${esc(g.name)}</span><span class="gmeta">${plural(g.sessions.length,"séance")} · ${plural(nx,"exercice")}${g.id===last?` · <b>dernière visite</b>`:""}${g.sessions.length?`<br>Séance du jour : ${esc(nextSession(g).name)}`:""}</span></button>`}).join("")+
         `<button class="gym add" data-act="new-gym">+ Ajouter une salle</button></div>
         <div class="backup"><span>Sauvegarde</span><button class="btn ghost" data-act="export">Exporter mes données</button><button class="btn ghost" data-act="import">Importer</button></div>`;
     }
@@ -301,14 +323,16 @@ function render(){
       ${state.gyms.length>1?"":`<button class="btn" data-act="load-example" id="b-ex">Partir d'un exemple Push / Pull / Legs</button>`}</div></div>`;
     app.innerHTML=h; return;
   }
-  h+=`<div class="chips" role="toolbar" aria-label="Séances">${g.sessions.map(s=>`<button class="chip" data-act="pick" data-id="${s.id}" aria-pressed="${s.id===current}">${esc(s.name)}</button>`).join("")}<button class="chip add" data-act="new-session" aria-label="Ajouter une séance">+ Séance</button></div>`;
+  const nx=nextSession(g);
+  h+=`<div class="chips" role="toolbar" aria-label="Séances">${g.sessions.map(s=>`<button class="chip" data-act="pick" data-id="${s.id}" aria-pressed="${s.id===current}">${esc(s.name)}${s===nx?`<span class="dot" title="Séance du jour"></span>`:""}</button>`).join("")}<button class="chip add" data-act="new-session" aria-label="Ajouter une séance">+ Séance</button></div>`;
   if(g.example){
     h+=`<div class="banner"><span>Programme d'exemple : modifie-le à ta sauce, ou repars de zéro.</span><button class="btn danger ${armed==="wipe"?"armed":""}" data-act="wipe">${armed==="wipe"?"Confirmer : tout effacer":"Tout effacer"}</button></div>`;
   }
   const s=sess();
   if(s){
-    h+=`<div class="shead"><div><h2>${esc(s.name)}</h2><div class="meta">${plural(s.exercises.length,"exercice")}</div></div>
-      <div class="row"><button class="btn" data-act="edit-session">Renommer</button><button class="btn" data-act="new-ex">+ Exercice</button></div></div>`;
+    const doneDay=g.done?.[s.id], doneToday=doneDay===today();
+    h+=`<div class="shead"><div>${s===nx?`<span class="today">Séance du jour</span>`:""}<h2>${esc(s.name)}</h2><div class="meta">${plural(s.exercises.length,"exercice")} · ${sinceTxt(doneDay)}</div></div>
+      <div class="row"><button class="btn ${doneToday?"isdone":""}" data-act="toggle-done" aria-pressed="${doneToday}">${doneToday?"Faite aujourd'hui ✓":"Marquer comme faite"}</button><button class="btn" data-act="edit-session">Renommer</button><button class="btn" data-act="new-ex">+ Exercice</button></div></div>`;
     if(!s.exercises.length) h+=`<div class="empty"><p>Aucun exercice dans cette séance.</p><button class="btn primary" data-act="new-ex">Ajouter un exercice</button></div>`;
     h+=`<div class="list">`+s.exercises.map(e=>{
       const hist=e.history||[], first=hist[0], lastUp=hist[hist.length-1];
@@ -409,7 +433,7 @@ function exSheet(e,focus){
     t.reps=$("#ex-reps").value.trim()||"10"; t.rest=Math.max(0,Math.round(num($("#ex-rest").value)*60));
     t.step=num($("#ex-step").value)||2.5; t.note=$("#ex-note").value.trim();
     const w=num($("#ex-weight").value);
-    if(e) setWeight(t,w); else {t.weight=w;t.history=[{d:today(),w}];sess().exercises.push(t)}
+    if(e){ if(setWeight(t,w)) markDone(sessOfEx(t.id)); } else {t.weight=w;t.history=[{d:today(),w}];sess().exercises.push(t)}
     persist();closeSheet();};
 }
 
@@ -450,7 +474,8 @@ function handleClick(ev){
     case "edit-ex": openEditor("ex",findEx(id),b.dataset.focus); break;
     case "close": closeSheet(); break;
     case "save": sheetSave(); break;
-    case "plus": case "minus": {const e=findEx(id); setWeight(e,e.weight+(act==="plus"?1:-1)*(e.step||2.5)); persist(); render(); break;}
+    case "plus": case "minus": {const e=findEx(id); if(setWeight(e,e.weight+(act==="plus"?1:-1)*(e.step||2.5))) markDone(sessOfEx(id)); persist(); render(); break;}
+    case "toggle-done": {const s=sess(), g=G(); markDone(s,g.done?.[s.id]!==today()); persist(); render(); break;}
     case "wipe":
       if(armed!=="wipe"){armed="wipe";render();break}
       {const g=G(); g.sessions=[]; g.example=false;} current=null; armed=null; persist(); render(); break;

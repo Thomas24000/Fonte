@@ -1,7 +1,7 @@
 // Fonte : fonctionnement hors ligne.
 // Les fichiers de l'app sont gardés en cache ; en ligne, la version du réseau est prise en priorité
 // (pour recevoir les mises à jour), avec repli sur le cache si le réseau est absent ou trop lent.
-const CACHE = "fonte-b01235ed8e";
+const CACHE = "fonte-b5a4a69081";
 const CORE = ["./", "index.html", "manifest.webmanifest", "apple-touch-icon.png", "icon-192.png", "icon-512.png"];
 const FONT_HOSTS = ["fonts.googleapis.com", "fonts.gstatic.com"];
 
