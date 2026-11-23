@@ -26,18 +26,18 @@ img{max-width:100%}
 /* Layout: one narrow column, phone-first. Séances as chips, exercises as stacked cards with a big weight readout and the plates per side. */
 :root{
   --bg:#eef0ee; --surface:#ffffff; --fg:#17191b; --muted:#5d6468; --line:#d6dbd8;
-  --accent:#1c5bd6; --accent-fg:#ffffff; --ok:#1f8a4c; --danger:#c0352b; --chip:#e1e5e2;
+  --accent:#1c5bd6; --accent-fg:#ffffff; --ok:#1f8a4c; --danger:#c0352b; --chip:#e1e5e2; --t-poulie:#7a3fc4;
   --p25:#d23a2f; --p20:#1c5bd6; --p15:#e3b419; --p10:#2f9a50; --p5:#f4f4f2; --p25s:#2a2c2e; --p125:#9aa1a6; --plate-line:#17191b33;
   --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#121416; --surface:#1b1e21; --fg:#eceeed; --muted:#9aa2a6; --line:#2c3135;
-  --accent:#5b8cf0; --accent-fg:#0d1420; --ok:#4cc07d; --danger:#ef6b5f; --chip:#24282c;
+  --accent:#5b8cf0; --accent-fg:#0d1420; --ok:#4cc07d; --danger:#ef6b5f; --chip:#24282c; --t-poulie:#b48af0;
   --p5:#dcdcd8; --p25s:#4a4e52; --plate-line:#00000055; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#121416; --surface:#1b1e21; --fg:#eceeed; --muted:#9aa2a6; --line:#2c3135;
-  --accent:#5b8cf0; --accent-fg:#0d1420; --ok:#4cc07d; --danger:#ef6b5f; --chip:#24282c;
+  --accent:#5b8cf0; --accent-fg:#0d1420; --ok:#4cc07d; --danger:#ef6b5f; --chip:#24282c; --t-poulie:#b48af0;
   --p5:#dcdcd8; --p25s:#4a4e52; --plate-line:#00000055; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45}
@@ -102,6 +102,12 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .gymbar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:12px}
 .gymname{font-size:13px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;color:var(--muted);min-width:0}
 .gymname::before{content:"Salle · ";font-weight:500}
+.tag{display:inline-block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;padding:2px 8px;border-radius:6px;margin-bottom:5px;border:1px solid currentColor}
+.t-barre{color:var(--p25)}
+.t-halteres{color:var(--ok)}
+.t-machine{color:var(--accent)}
+.t-poulie{color:var(--t-poulie)}
+.t-corps{color:var(--muted)}
 .hint{margin:0;font-size:13px;color:var(--muted)}
 .hint b{color:var(--danger)}
 textarea.code{font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;width:100%;resize:vertical;word-break:break-all}
@@ -148,14 +154,14 @@ function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
 function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 
 function exampleSessions(){
-  const ex=(name,sets,reps,weight,type,rest,note,hist)=>({id:uid(),name,sets,reps,weight,step:type==="barre"?2.5:type==="halteres"?2:5,type,rest,note:note||"",history:hist||[{d:today(),w:weight}]});
+  const ex=(name,sets,reps,weight,type,rest,note,hist)=>({id:uid(),name,sets,reps,weight,step:type==="barre"||type==="poulie"?2.5:type==="halteres"?2:5,type,rest,note:note||"",history:hist||[{d:today(),w:weight}]});
   return [
     {id:uid(),name:"Push",exercises:[
       ex("Développé couché",4,8,70,"barre",150,"Omoplates serrées, pieds ancrés.",[{d:"2026-10-26",w:65},{d:"2026-11-09",w:67.5},{d:"2026-11-16",w:70}]),
       ex("Développé militaire",3,8,40,"barre",120),
       ex("Développé incliné haltères",3,10,24,"halteres",90),
       ex("Élévations latérales",3,15,8,"halteres",60),
-      ex("Extensions triceps poulie",3,12,25,"machine",60)]},
+      ex("Extensions triceps poulie",3,12,25,"poulie",60)]},
     {id:uid(),name:"Pull",exercises:[
       ex("Soulevé de terre",3,5,110,"barre",180,"",[{d:"2026-10-28",w:100},{d:"2026-11-11",w:105},{d:"2026-11-18",w:110}]),
       ex("Tractions",4,8,0,"corps",120,"Ajouter du lest quand 4×10 passe."),
@@ -250,7 +256,8 @@ function spark(h){
   const e=xy[xy.length-1];
   return `<svg viewBox="0 0 70 26" aria-hidden="true"><path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${e[0]}" cy="${e[1]}" r="3" fill="var(--accent)"/></svg>`;
 }
-const TYPES={barre:"Barre (20 kg)",halteres:"Haltères (par main)",machine:"Machine / poulie",corps:"Poids du corps (+ lest)"};
+const TYPES={barre:"Barre (20 kg)",halteres:"Haltères (par main)",machine:"Machine guidée",poulie:"Poulie / câble",corps:"Poids du corps (+ lest)"};
+const TAGS={barre:"Barre",halteres:"Haltères",machine:"Machine",poulie:"Poulie",corps:"Poids du corps"};
 
 /* ---------- rendu ---------- */
 function render(){
@@ -315,7 +322,7 @@ function render(){
       const unit=e.type==="corps"?(e.weight>0?"kg lest":"PDC"):e.type==="halteres"?"kg/main":"kg";
       return `<article class="card">
         <div class="chead">
-          <div style="flex:1;min-width:0"><h3>${esc(e.name)}</h3><div class="scheme"><b>${e.sets} × ${esc(e.reps)}</b>${e.rest?` · repos ${fmt(e.rest/60)} min`:""} · ${esc(TYPES[e.type]||"")}${lastUp?` · poids du ${dateFr(lastUp.d)}`:""}</div></div>
+          <div style="flex:1;min-width:0"><span class="tag t-${esc(e.type)}">${esc(TAGS[e.type]||"")}</span><h3>${esc(e.name)}</h3><div class="scheme"><b>${e.sets} × ${esc(e.reps)}</b>${e.rest?` · repos ${fmt(e.rest/60)} min`:""}${lastUp?` · poids du ${dateFr(lastUp.d)}`:""}</div></div>
           <button class="btn ghost" data-act="edit-ex" data-id="${e.id}" aria-label="Modifier ${esc(e.name)}">Modifier</button></div>
         <div class="wline"><button class="step" data-act="minus" data-id="${e.id}" aria-label="Retirer ${fmt(e.step)} kg">−</button>
           <button class="weight" data-act="edit-ex" data-id="${e.id}" data-focus="weight">${e.type==="corps"&&!e.weight?"PDC":fmt(e.weight)}<small>${e.type==="corps"&&!e.weight?"":unit}</small></button>
