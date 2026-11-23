@@ -1,20 +1,22 @@
-// Fonte : fonctionnement hors ligne.
-// Les fichiers de l'app sont gardés en cache ; en ligne, la version du réseau est prise en priorité
-// (pour recevoir les mises à jour), avec repli sur le cache si le réseau est absent ou trop lent.
-const CACHE = "fonte-b5a4a69081";
+// Fonte : fonctionnement hors ligne et ouverture instantanée.
+// L'app est servie depuis la copie du téléphone. Chaque déploiement change ce fichier (version ci-dessous) :
+// le navigateur le remarque en arrière-plan, télécharge la nouvelle version, puis la page propose de recharger.
+const VERSION = "787975d6c0";
+const CACHE = "fonte-app-" + VERSION;
 const CORE = ["./", "index.html", "manifest.webmanifest", "apple-touch-icon.png", "icon-192.png", "icon-512.png"];
 const FONT_HOSTS = ["fonts.googleapis.com", "fonts.gstatic.com"];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
+  // cache: "reload" contourne le cache HTTP du navigateur pour avoir vraiment la nouvelle version
+  e.waitUntil(caches.open(CACHE)
+    .then(c => Promise.all(CORE.map(u => fetch(new Request(u, { cache: "reload" })).then(r => { if (!r.ok) throw new Error(u); return c.put(u, r); }))))
+    .then(() => self.skipWaiting()));
 });
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys()
     .then(keys => Promise.all(keys.filter(k => k.startsWith("fonte-") && k !== CACHE && k !== "fonte-polices").map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
-
-function timeout(ms) { return new Promise((_, rej) => setTimeout(() => rej(new Error("lent")), ms)); }
 
 self.addEventListener("fetch", e => {
   const req = e.request;
@@ -34,17 +36,13 @@ self.addEventListener("fetch", e => {
   }
   if (url.origin !== location.origin) return;
 
-  // Fichiers de l'app : réseau d'abord (3 s max), sinon cache.
+  // Fichiers de l'app : copie du téléphone d'abord (instantané), réseau seulement si elle manque.
   e.respondWith((async () => {
     const c = await caches.open(CACHE);
-    try {
-      const res = await Promise.race([fetch(req), timeout(3000)]);
-      if (res.ok) c.put(req, res.clone());
-      return res;
-    } catch (err) {
-      const hit = await c.match(req, { ignoreSearch: true }) || (req.mode === "navigate" ? await c.match("index.html") : null);
-      if (hit) return hit;
-      throw err;
-    }
+    const hit = await c.match(req, { ignoreSearch: true }) || (req.mode === "navigate" ? (await c.match("./") || await c.match("index.html")) : null);
+    if (hit) return hit;
+    const res = await fetch(req);
+    if (res.ok) c.put(req, res.clone());
+    return res;
   })());
 });
