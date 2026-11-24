@@ -571,9 +571,27 @@ init();
 })();
 </script>
 
-<div id="maj" hidden style="position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--fg);color:var(--bg);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));font-size:14px">
-  <span>Nouvelle version de Fonte prête.</span>
-  <button id="maj-btn" style="border:0;border-radius:10px;padding:8px 14px;font:inherit;font-weight:600;background:var(--accent);color:var(--accent-fg);cursor:pointer">Mettre à jour</button>
+<style>
+/* Bandeau de mise à jour : carte flottante en haut, loin du chrono du bas */
+.maj{position:fixed;z-index:40;top:calc(10px + env(safe-area-inset-top,0px));left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));
+  max-width:440px;margin:0 auto;display:grid;grid-template-columns:40px minmax(0,1fr) 32px;align-items:center;column-gap:12px;row-gap:10px;padding:12px;
+  background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px #0000004d;font-family:var(--body)}
+.maj-ico{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+.maj-ico svg{width:22px;height:22px}
+.maj-txt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
+.maj-txt b{font-family:var(--display);font-size:18px;white-space:nowrap;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+.maj-txt span{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.maj-go{grid-column:1/-1;grid-row:2;border:0;border-radius:11px;padding:11px 14px;font:inherit;font-size:14px;font-weight:600;background:var(--accent);color:var(--accent-fg);cursor:pointer;white-space:nowrap}
+.maj-x{flex:none;width:32px;height:32px;border:0;border-radius:9px;background:transparent;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center}
+.maj-go:focus-visible,.maj-x:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:no-preference){.maj:not([hidden]){animation:majIn .45s cubic-bezier(.2,.9,.3,1.2)}}
+@keyframes majIn{from{transform:translateY(-130%);opacity:0}to{transform:none;opacity:1}}
+</style>
+<div id="maj" class="maj" role="status" hidden>
+  <div class="maj-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2" y="10" width="3" height="4" rx="1" fill="currentColor" opacity=".5"/><rect x="5" y="6" width="3.5" height="12" rx="1.2" fill="currentColor"/><rect x="8.5" y="11" width="7" height="2" rx="1" fill="currentColor" opacity=".7"/><rect x="15.5" y="6" width="3.5" height="12" rx="1.2" fill="currentColor"/><rect x="19" y="10" width="3" height="4" rx="1" fill="currentColor" opacity=".5"/></svg></div>
+  <div class="maj-txt"><b>Nouvelle version prête</b><span>Tes données restent intactes</span></div>
+  <button id="maj-x" class="maj-x" aria-label="Plus tard">×</button>
+  <button id="maj-btn" class="maj-go">Mettre à jour</button>
 </div>
 <script>
 if("serviceWorker" in navigator){
@@ -584,6 +602,7 @@ if("serviceWorker" in navigator){
     if(hadController) document.getElementById("maj").hidden=false;
   });
   document.getElementById("maj-btn").addEventListener("click",()=>location.reload());
+  document.getElementById("maj-x").addEventListener("click",()=>{document.getElementById("maj").hidden=true});
   addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").then(reg=>{
     // l'app revient au premier plan sans être relancée (téléphone) : on vérifie quand même
     document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")reg.update().catch(()=>{})});
